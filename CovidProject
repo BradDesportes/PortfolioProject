@@ -1,0 +1,63 @@
+SELECT location, date, total_cases, new_cases, total_deaths, population
+FROM `esoteric-parsec-389113.COVID.OWID2` 
+ORDER BY 1,2
+LIMIT 1000
+
+-- Regardons dans un premier temps le nombre de cas recensé par rapport au nombre de morts aux Etats-Unis.
+
+SELECT location, date, total_cases, new_cases, total_deaths, (total_deaths/total_cases)*100 as deaths_percentage
+FROM `esoteric-parsec-389113.COVID.OWID2` 
+WHERE location like '%States%'
+ORDER BY 1,2
+LIMIT 1000
+
+-- Regardons maintenant le nombre de cas par rapport au nombre d'habitants.
+
+SELECT location, population, MAX(total_cases) as HighestInfectionRate, MAX((total_cases/population))*100 as cases_percentage
+FROM `esoteric-parsec-389113.COVID.OWID2` 
+GROUP BY location, population
+ORDER BY cases_percentage desc
+
+
+-- Regardons à présent les pays dont le nombre de morts est le plus élevé.
+
+SELECT location, MAX(total_deaths) AS HighestDeathsCount
+FROM `esoteric-parsec-389113.COVID.OWID2` 
+WHERE location is not null
+GROUP BY location
+ORDER BY HighestDeathsCount desc
+
+-- Création d'une autre vue pour alimenter nos futures analyses
+
+SELECT date, SUM(new_cases) as total_cases, SUM(cast(new_deaths as int)) AS total_deaths, SUM(cast(total_deaths as int))/SUM(total_cases)*100 AS DeathPercentage
+FROM `esoteric-parsec-389113.COVID.OWID2` 
+WHERE continent is not null
+GROUP BY date
+ORDER BY 1,2
+
+-- Création d'une table 
+
+DROP TABLE if exists #PercentPopulationVaccinated
+CREATE TABLE #PercentPopulationVaccinated
+(
+  Continent nvarchar(255),
+  Location nvarchar(255),
+  date datetime,
+  population numeric,
+  new_vaccinations numeric,
+  Cumul numeric
+)
+Insert into #PercentPopulationVaccinated
+CREATE View PercentPopulationVaccinated AS
+SELECT continent, location, date, population, new_vaccinations, SUM(new_vaccinations) OVER (PARTITION BY location ORDER BY location) AS Cumul
+FROM `esoteric-parsec-389113.COVID.OWID2` 
+
+SELECT*, (Cumul/Pupulation)*100
+FROM #PercentPopulationVaccinated
+
+-- Créons maintenant une vue afin de pouvoir l'utiliser pour nos futures visualisations et analyses.
+
+Create View PercentPopulationVaccinated as 
+SELECT continent, location, date, population, new_vaccinations, SUM(new_vaccinations) OVER (PARTITION BY location ORDER BY location) AS Cumul
+FROM `esoteric-parsec-389113.COVID.OWID2` 
+WHERE continent is not null
