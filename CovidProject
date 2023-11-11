@@ -1,3 +1,5 @@
+SQL Project :
+
 SELECT location, date, total_cases, new_cases, total_deaths, population
 FROM `esoteric-parsec-389113.COVID.OWID2` 
 ORDER BY 1,2
